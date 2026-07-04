@@ -10,9 +10,11 @@
 
 | 登录页面 | 文件浏览 | 上传进度 |
 |---------|---------|---------|
-| ![login](https://via.placeholder.com/300x200/1a1a23/3b82f6?text=Login) | ![browse](https://via.placeholder.com/300x200/1a1a23/22c55e?text=File+Browser) | ![upload](https://via.placeholder.com/300x200/1a1a23/60a5fa?text=Upload+Progress) |
+| 登录页面 | 文件浏览 | 上传进度 |
+|---------|---------|---------|
+| ![Login](https://placehold.co/300x200/1a1a23/3b82f6?text=Login) | ![Browse](https://placehold.co/300x200/1a1a23/22c55e?text=File+Browser) | ![Upload](https://placehold.co/300x200/1a1a23/60a5fa?text=Upload+Progress) |
 
-*(截图占位符 — 欢迎 PR 替换为真实截图)*
+*(欢迎 PR 替换为真实截图)*
 
 ---
 
