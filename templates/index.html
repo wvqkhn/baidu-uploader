@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>百度网盘上传助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+            background: #0f0f13;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        :root {
+            --sidebar-w: 260px;
+            --header-h: 52px;
+            --radius: 10px;
+        }
+
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px; height: var(--header-h); min-height: var(--header-h);
+            background: #1a1a23;
+            border-bottom: 1px solid #2a2a3a;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .menu-btn {
+            display: none; background: none; border: none; color: #ccc;
+            font-size: 22px; cursor: pointer; padding: 4px;
+        }
+        .header-left .logo { font-size: 20px; flex-shrink: 0; }
+        .header-left h1 { font-size: 16px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .baidu-status {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 12px; padding: 4px 10px;
+            background: #0f0f13; border-radius: 20px;
+            border: 1px solid #2a2a3a; white-space: nowrap;
+        }
+        .baidu-status .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .baidu-status .dot.online { background: #22c55e; }
+        .baidu-status .dot.offline { background: #ef4444; }
+        .baidu-status .status-text { overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+        .logout-btn {
+            padding: 4px 12px; background: transparent;
+            border: 1px solid #444; border-radius: 6px;
+            color: #aaa; cursor: pointer; font-size: 12px;
+            transition: all .2s;
+        }
+        .logout-btn:hover { border-color: #ef4444; color: #ef4444; }
+
+        .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-w); min-width: var(--sidebar-w);
+            background: #14141d;
+            border-right: 1px solid #2a2a3a;
+            display: flex; flex-direction: column;
+            transition: transform .25s ease;
+        }
+        .sidebar-header {
+            padding: 10px 14px; font-size: 12px; font-weight: 600; color: #888;
+            border-bottom: 1px solid #2a2a3a;
+            text-transform: uppercase; letter-spacing: .5px;
+        }
+        .dir-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+        .dir-tree::-webkit-scrollbar { width: 4px; }
+        .dir-tree::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .dir-item {
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 14px; cursor: pointer; font-size: 13px;
+            color: #ccc; transition: all .1s;
+            border-left: 3px solid transparent;
+        }
+        .dir-item:hover { background: #1e1e2a; }
+        .dir-item.active { background: #1e1e2a; color: #3b82f6; border-left-color: #3b82f6; }
+        .dir-item .icon { font-size: 15px; flex-shrink: 0; }
+        .dir-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+        /* Content */
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+        .file-area { flex: 1; overflow: auto; padding: 10px; }
+        .file-area::-webkit-scrollbar { width: 5px; height: 5px; }
+        .file-area::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        .path-bar {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 10px; background: #1a1a23;
+            border-bottom: 1px solid #2a2a3a;
+            font-size: 13px; flex-shrink: 0; min-height: 38px;
+        }
+        .path-bar .path-text { color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 12px; }
+        .path-bar .go-up {
+            padding: 3px 8px; background: #2a2a3a; border: none;
+            border-radius: 4px; color: #ccc; cursor: pointer; font-size: 12px; white-space: nowrap;
+        }
+        .path-bar .go-up:active { background: #3a3a4a; }
+
+        /* File table */
+        .file-table { width: 100%; border-collapse: collapse; min-width: 300px; }
+        .file-table th {
+            text-align: left; padding: 8px 8px;
+            font-size: 11px; font-weight: 600; color: #666;
+            border-bottom: 1px solid #2a2a3a;
+        }
+        .file-table td { padding: 8px 8px; border-bottom: 1px solid #1a1a23; font-size: 13px; }
+        .file-table tr { transition: background .1s; }
+        .file-table tr:active { background: #1e1e2a; }
+        .file-table tr.selected { background: #1a1a30; }
+        .file-table .cb { width: 32px; text-align: center; padding: 8px 4px; }
+        .file-table .cb input { width: 18px; height: 18px; accent-color: #3b82f6; cursor: pointer; }
+        .file-table .fname { display: flex; align-items: center; gap: 6px; }
+        .file-table .fname .ficon { font-size: 16px; flex-shrink: 0; }
+        .file-table .fname .name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-table .fname .sync-badge { font-size: 11px; flex-shrink: 0; margin-left: auto; }
+        .file-table .fsize { color: #888; font-size: 12px; width: 80px; white-space: nowrap; }
+        .file-table .fmtime { color: #888; font-size: 12px; width: 100px; white-space: nowrap; display: table-cell; }
+        .file-table .empty { text-align: center; padding: 40px 20px; color: #555; font-size: 14px; }
+        .file-table tr.directory .name-text { color: #e0e0e0; font-weight: 500; }
+        .file-table tr.file .name-text { color: #aaa; }
+        .file-table tr.directory td:not(.cb) { cursor: pointer; }
+
+        /* Bottom bar */
+        .bottom-bar {
+            background: #1a1a23; border-top: 1px solid #2a2a3a;
+            padding: 10px 12px; flex-shrink: 0;
+        }
+        .bottom-bar .controls {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .bottom-bar .controls label {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 12px; color: #aaa; cursor: pointer;
+        }
+        .bottom-bar .controls label input[type="checkbox"] { accent-color: #3b82f6; width: 16px; height: 16px; }
+        .bottom-bar .controls .remote-dir { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 120px; }
+        .bottom-bar .controls .remote-dir input {
+            padding: 5px 8px; background: #0f0f13; border: 1px solid #333;
+            border-radius: 4px; color: #fff; font-size: 12px; width: 100%; min-width: 80px;
+        }
+        .bottom-bar .controls .remote-dir span { white-space: nowrap; }
+        .upload-btn {
+            padding: 8px 16px; background: #3b82f6; border: none;
+            border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: background .2s; white-space: nowrap;
+        }
+        .upload-btn:active { background: #2563eb; }
+        .upload-btn:disabled { opacity: .5; }
+
+        /* Queue panel */
+        .queue-panel {
+            background: #1a1a23; border-top: 1px solid #2a2a3a;
+            max-height: 200px; overflow-y: auto; flex-shrink: 0;
+            display: none;
+        }
+        .queue-panel.open { display: block; }
+        .queue-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 12px; font-size: 12px; color: #888;
+            border-bottom: 1px solid #2a2a3a; cursor: pointer;
+            position: sticky; top: 0; background: #1a1a23; z-index: 2;
+        }
+        .queue-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 12px; font-size: 12px; border-bottom: 1px solid #14141d;
+        }
+        .queue-item .qname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .queue-item .qstatus {
+            padding: 2px 6px; border-radius: 3px; font-size: 10px; white-space: nowrap;
+        }
+        .queue-item .qstatus.queued { background: #2a2a3a; color: #888; }
+        .queue-item .qstatus.uploading { background: #1e3a5f; color: #60a5fa; }
+        .queue-item .qstatus.completed { background: #14532d; color: #4ade80; }
+        .queue-item .qstatus.failed { background: #450a0a; color: #f87171; }
+        .queue-item .qbar { width: 70px; height: 14px; background: #2a2a3a; border-radius: 7px; overflow: hidden; position: relative; flex-shrink: 0; }
+        .queue-item .qbar .fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #22c55e); border-radius: 7px; transition: width .5s; }
+        .queue-item .qbar .pct { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+        .retry-btn {
+            padding: 3px 8px; background: #3b82f6; border: none;
+            border-radius: 4px; color: #fff; cursor: pointer; font-size: 11px; white-space: nowrap;
+        }
+        .retry-btn:active { background: #2563eb; }
+        .mini-bar { width: 60px; height: 6px; background: #2a2a3a; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+        .mini-bar .fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #22c55e); border-radius: 3px; transition: width .5s; }
+        .del-btn {
+            padding: 2px 6px; background: #450a0a; border: 1px solid #7f1d1d;
+            border-radius: 4px; color: #fca5a5; cursor: pointer; font-size: 12px;
+            transition: all .2s;
+        }
+        .del-btn:hover { background: #7f1d1d; }
+
+        /* Overlay for mobile sidebar */
+        .sidebar-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,.5); z-index: 8;
+        }
+        .sidebar-overlay.open { display: block; }
+
+        /* ===== Mobile ===== */
+        @media (max-width: 768px) {
+            .menu-btn { display: block; }
+            .sidebar {
+                position: fixed; top: 0; left: 0; bottom: 0;
+                z-index: 9; transform: translateX(-100%);
+                width: 75vw; max-width: 300px;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .file-table .fmtime { display: none; }
+            .bottom-bar .controls { gap: 6px; }
+            .bottom-bar .controls label { font-size: 11px; }
+            .bottom-bar .controls .remote-dir { min-width: 80px; }
+            .upload-btn { padding: 8px 12px; font-size: 12px; }
+            .baidu-status .status-text { max-width: 80px; }
+        }
+
+        @media (max-width: 480px) {
+            .header { padding: 0 10px; }
+            .file-area { padding: 6px; }
+            .file-table td { padding: 6px 6px; font-size: 12px; }
+            .file-table .fsize { width: 60px; }
+            .file-table th { font-size: 10px; padding: 6px; }
+            .file-table .cb { width: 28px; }
+            .file-table .cb input { width: 16px; height: 16px; }
+            .bottom-bar { padding: 8px 8px; }
+            .queue-item { padding: 6px 8px; flex-wrap: wrap; }
+            .queue-item .qbar { width: 50px; height: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+            <span class="logo">☁️</span>
+            <h1>上传助手</h1>
+        </div>
+        <div class="header-right">
+            <div class="baidu-status" id="baiduStatus">
+                <span class="dot offline" id="statusDot"></span>
+                <span class="status-text" id="statusText">连接中...</span>
+            </div>
+            <a href="/logout"><button class="logout-btn">退出</button></a>
+        </div>
+    </div>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <div class="main">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">📂 本地目录</div>
+            <div class="dir-tree" id="dirTree">
+                <div class="dir-item active" onclick="navigateTo('/mnt')">
+                    <span class="icon">💾</span>
+                    <span class="name">/mnt</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="path-bar">
+                <button class="go-up" onclick="goUp()">⬆</button>
+                <span class="path-text" id="currentPath">/mnt</span>
+                <span style="color:#555;font-size:11px;white-space:nowrap" id="fileCount"></span>
+                <button class="go-up" id="sizeToggle" onclick="toggleSizes()" style="font-size:12px" title="显示/隐藏文件夹大小">📏</button>
+                <button class="go-up" onclick="refreshDir()" style="font-size:15px;padding:1px 6px">🔄</button>
+            </div>
+
+            <div class="file-area" id="fileArea">
+                <table class="file-table">
+                    <thead>
+                        <tr>
+                            <th class="cb"><input type="checkbox" id="selectAll" onchange="toggleAll()"></th>
+                            <th>名称</th>
+                            <th class="fsize">大小</th>
+                            <th class="fmtime">时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fileList"></tbody>
+                </table>
+            </div>
+
+            <div class="queue-panel" id="queuePanel">
+                <div class="queue-header" onclick="toggleQueue()">
+                    <span>📋 队列 <span id="queueCount">0</span> <span id="failedCount" style="color:#f87171;display:none"></span></span>
+                    <span>▼</span>
+                </div>
+                <div id="queueList"></div>
+                <div id="failedList" style="border-top:1px solid #2a2a3a;"></div>
+            </div>
+
+            <div class="bottom-bar">
+                <div class="controls">
+                    <label>
+                        <input type="checkbox" id="deleteAfter" checked>
+                        🗑 删除源文件
+                    </label>
+                    <div class="remote-dir">
+                        <span>上传到:</span>
+                        <input type="text" id="remoteDir" value="/apps/bypy">
+                    </div>
+                    <button class="upload-btn" id="uploadBtn" onclick="startUpload()" disabled>
+                        📤 上传
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPath = '/mnt';
+        let selectedPaths = new Set();
+        let syncedPaths = new Set();
+        let dirProgress = {};
+        let pollTimer = null;
+        let dirPollTimer = null;
+        let showSizes = localStorage.getItem('showDirSizes') === '1';
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+
+        function navigateTo(path) {
+            currentPath = path;
+            document.getElementById('currentPath').textContent = path;
+            selectedPaths.clear();
+            loadDir(path);
+            updateSidebar(path);
+            closeSidebar();
+        }
+
+        function goUp() {
+            const p = currentPath.replace(/\/+$/, '');
+            const i = p.lastIndexOf('/');
+            navigateTo(i > 0 ? p.substring(0, i) : '/');
+        }
+
+        function refreshDir() { loadDir(currentPath); }
+
+        async function loadSyncedPaths() {
+            try {
+                const r = await fetch('/api/synced');
+                const d = await r.json();
+                syncedPaths = new Set(d.paths || []);
+                dirProgress = d.dirs || {};
+            } catch(e) {}
+        }
+        function isSynced(p) { return syncedPaths.has(p); }
+        function getDirProg(p) { return dirProgress[p] || null; }
+
+        async function loadDir(path) {
+            await loadSyncedPaths();
+            const tbody = document.getElementById('fileList');
+            tbody.innerHTML = '<tr><td colspan="4" class="empty">⏳ 加载中...</td></tr>';
+
+            try {
+                const r = await fetch(`/api/list?path=${encodeURIComponent(path)}&sizes=${showSizes?'1':'0'}`);
+                const d = await r.json();
+                if (d.error) { tbody.innerHTML = `<tr><td colspan="4" class="empty">❌ ${d.error}</td></tr>`; return; }
+
+                document.getElementById('fileCount').textContent = `${d.items.length} 项`;
+
+                let html = '';
+                const dirs = d.items.filter(i => i.is_dir);
+                const files = d.items.filter(i => !i.is_dir);
+
+                for (const item of dirs) {
+                    const ck = selectedPaths.has(item.path) ? 'checked' : '';
+                    const sy = isSynced(item.path) ? '<span class="sync-badge">✅</span>' : '';
+                    const sz = fmtSize(item.size, true);
+                    // 检查是否有目录上传进度
+                    const dp = getDirProg(item.path);
+                    let progHtml = '';
+                    if (dp && dp.status === 'uploading') {
+                        progHtml = `<div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div class="mini-bar"><div class="fill" style="width:${dp.progress}%"></div></div><span style="font-size:10px;color:#60a5fa">${dp.completed}/${dp.total}</span></div>`;
+                    } else if (dp && dp.status === 'completed') {
+                        progHtml = `<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><span style="font-size:11px;color:#4ade80">✅ 同步完成</span><button class="del-btn" onclick="event.stopPropagation();deleteSynced('${esc(item.path)}')">🗑️</button></div>`;
+                    }
+                    html += `<tr class="directory" data-path="${esc(item.path)}">
+                        <td class="cb" onclick="event.stopPropagation()">
+                            <input type="checkbox" ${ck} onchange="toggleSelect('${esc(item.path)}')">
+                        </td>
+                        <td onclick="navigateTo('${esc(item.path)}')">
+                            <div class="fname"><span class="ficon">📁</span><span class="name-text">${escH(item.name)}</span>${sy}</div>
+                            ${progHtml}
+                        </td>
+                        <td class="fsize" onclick="navigateTo('${esc(item.path)}')">${sz}</td>
+                        <td class="fmtime" onclick="navigateTo('${esc(item.path)}')">${fmtTime(item.mtime)}</td>
+                    </tr>`;
+                }
+                for (const item of files) {
+                    const ck = selectedPaths.has(item.path) ? 'checked' : '';
+                    const sy = isSynced(item.path) ? '<span class="sync-badge">✅</span>' : '';
+                    html += `<tr class="file" onclick="toggleSelect('${esc(item.path)}')">
+                        <td class="cb" onclick="event.stopPropagation()">
+                            <input type="checkbox" ${ck} onchange="toggleSelect('${esc(item.path)}')">
+                        </td>
+                        <td><div class="fname"><span class="ficon">📄</span><span class="name-text">${escH(item.name)}</span>${sy}</div></td>
+                        <td class="fsize">${fmtSize(item.size)}</td>
+                        <td class="fmtime">${fmtTime(item.mtime)}</td>
+                    </tr>`;
+                }
+                if (!dirs.length && !files.length) html = '<tr><td colspan="4" class="empty">📂 空目录</td></tr>';
+                tbody.innerHTML = html;
+                updateSelectAll();
+                updateUploadBtn();
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty">❌ 加载失败</td></tr>`;
+            }
+        }
+
+        function toggleSelect(p) {
+            if (selectedPaths.has(p)) selectedPaths.delete(p); else selectedPaths.add(p);
+            document.querySelectorAll('.file-table input[type="checkbox"]').forEach(cb => {
+                const m = cb.getAttribute('onchange');
+                if (m) { const x = m.match(/'([^']+)'/); if (x) cb.checked = selectedPaths.has(x[1]); }
+            });
+            updateSelectAll();
+            updateUploadBtn();
+        }
+
+        function toggleAll() {
+            const c = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.file-table input[type="checkbox"]').forEach(cb => cb.checked = c);
+            selectedPaths.clear();
+            if (c) {
+                document.querySelectorAll('.file-table input[type="checkbox"]').forEach(cb => {
+                    const m = cb.getAttribute('onchange');
+                    if (m) { const x = m.match(/'([^']+)'/); if (x) selectedPaths.add(x[1]); }
+                });
+            }
+            updateUploadBtn();
+        }
+
+        function updateSelectAll() {
+            const all = document.querySelectorAll('.file-table input[type="checkbox"]');
+            const ck = document.querySelectorAll('.file-table input[type="checkbox"]:checked');
+            const sa = document.getElementById('selectAll');
+            sa.checked = all.length > 0 && ck.length === all.length;
+            sa.indeterminate = ck.length > 0 && ck.length < all.length;
+        }
+
+        function updateUploadBtn() {
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = selectedPaths.size === 0;
+            btn.textContent = selectedPaths.size > 0 ? `📤 上传 (${selectedPaths.size})` : '📤 上传';
+        }
+
+        function toggleSizes() {
+            showSizes = !showSizes;
+            localStorage.setItem('showDirSizes', showSizes ? '1' : '0');
+            updateSizeToggleBtn();
+            loadDir(currentPath);
+        }
+        function updateSizeToggleBtn() {
+            const btn = document.getElementById('sizeToggle');
+            if (showSizes) {
+                btn.style.background = '#3b82f6';
+                btn.style.color = '#fff';
+                btn.title = '已开启：显示文件夹大小';
+            } else {
+                btn.style.background = '#2a2a3a';
+                btn.style.color = '#ccc';
+                btn.title = '已关闭：点击显示文件夹大小';
+            }
+        }
+
+        function updateSidebar(path) {
+            document.querySelectorAll('.dir-item').forEach(el => el.classList.toggle('active', el.dataset.path === path));
+        }
+
+        async function startUpload() {
+            if (selectedPaths.size === 0) return;
+            const files = Array.from(selectedPaths);
+            const remoteDir = document.getElementById('remoteDir').value.trim() || '/apps/bypy';
+            const deleteAfter = document.getElementById('deleteAfter').checked;
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('queuePanel').classList.add('open');
+
+            try {
+                const r = await fetch('/api/upload/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({files, remote_dir: remoteDir, delete_after: deleteAfter})
+                });
+                const d = await r.json();
+                if (d.error) { alert('失败: ' + d.error); return; }
+
+                if (d.dir_scanning) {
+                    // 目录正在后台扫描
+                    document.getElementById('queueCount').textContent = '⏳';
+                    document.getElementById('queueList').innerHTML =
+                        `<div class="queue-item" style="color:#fbbf24">🔍 正在扫描目录，请稍候...</div>`;
+                    // 开始轮询等待扫描完成
+                    if (pollTimer) clearInterval(pollTimer);
+                    const scanCheck = setInterval(async () => {
+                        const sr = await fetch('/api/upload/queue');
+                        const sd = await sr.json();
+                        if (sd.queue.length > 0 || sd.completed_count > 0) {
+                            clearInterval(scanCheck);
+                            document.getElementById('queueCount').textContent = sd.queue.length;
+                            await pollQueue();
+                            pollTimer = setInterval(pollQueue, 2000);
+                        }
+                    }, 3000);
+                } else {
+                    // 显示上传数量
+                    const count = (d.upload_ids || []).length;
+                    document.getElementById('queueCount').textContent = count;
+                    if (count > 0) {
+                        document.getElementById('queueList').innerHTML =
+                            `<div class="queue-item" style="color:#888">📤 ${count} 个文件加入上传队列...</div>`;
+                    }
+                    if (pollTimer) clearInterval(pollTimer);
+                    setTimeout(async () => {
+                        await pollQueue();
+                        pollTimer = setInterval(pollQueue, 2000);
+                    }, 1000);
+                }
+            } catch(e) { alert('失败: ' + e.message); }
+            document.getElementById('uploadBtn').disabled = false;
+        }
+
+        async function pollQueue() {
+            try {
+                const r = await fetch('/api/upload/queue');
+                const d = await r.json();
+                const list = document.getElementById('queueList');
+                document.getElementById('queueCount').textContent = d.queue.length;
+
+                let html = '';
+                for (const item of d.queue) {
+                    const pct = item.progress || 0;
+                    html += `<div class="queue-item">
+                        <span class="qname">${escH(item.local_path.split('/').pop())}</span>
+                        <span class="qstatus ${item.status}">${item.status === 'uploading' ? '上传中' : '等待'}</span>
+                        <div class="qbar"><div class="fill" style="width:${pct}%"></div><span class="pct">${pct}%</span></div>
+                    </div>`;
+                }
+                list.innerHTML = html;
+
+                const ar = await fetch('/api/uploads');
+                const ad = await ar.json();
+                const fi = ad.filter(x => x.status === 'failed');
+                const fe = document.getElementById('failedList');
+                const fc = document.getElementById('failedCount');
+                if (fi.length > 0) {
+                    fc.style.display = 'inline';
+                    fc.textContent = `| ❌ ${fi.length}`;
+                    let fh = `<div style="padding:5px 12px;font-size:11px;color:#f87171;">❌ 失败任务</div>`;
+                    for (const item of fi.slice(0, 20)) {
+                        fh += `<div class="queue-item">
+                            <span class="qname">${escH(item.local_path.split('/').pop())}</span>
+                            <span class="qstatus failed">失败</span>
+                            <span style="font-size:10px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(item.error_msg||'')}</span>
+                            <button class="retry-btn" onclick="retryUpload(${item.id})">🔄 重试</button>
+                        </div>`;
+                    }
+                    fe.innerHTML = fh;
+                } else { fe.innerHTML = ''; fc.style.display = 'none'; }
+
+                if (d.queue.length === 0) {
+                    // 队列为空时，如果之前有过上传，显示完成信息
+                    const totalCompleted = d.completed_count;
+                    if (totalCompleted > 0) {
+                        // 在队列面板显示一个完成的消息
+                        if (!list.innerHTML.trim()) {
+                            list.innerHTML = `<div class="queue-item" style="color:#4ade80">✅ 上传完成！共 ${totalCompleted} 个文件</div>`;
+                        }
+                        // 延迟关闭轮询，让用户能看到完成消息
+                        setTimeout(() => {
+                            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                            loadSyncedPaths();
+                            loadDir(currentPath);
+                        }, 3000);
+                    } else {
+                        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                    }
+                }
+            } catch(e) {}
+        }
+
+        async function deleteSynced(path) {
+            if (!confirm(`确认删除 "${path}" 吗？`)) return;
+            try {
+                const r = await fetch('/api/delete-synced', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path})
+                });
+                const d = await r.json();
+                if (d.success) {
+                    await loadSyncedPaths();
+                    loadDir(currentPath);
+                } else {
+                    alert('删除失败: ' + (d.error || ''));
+                }
+            } catch(e) {
+                alert('删除失败: ' + e.message);
+            }
+        }
+
+        async function retryUpload(id) {
+            try {
+                const r = await fetch('/api/upload/retry', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ids: [id]})
+                });
+                const d = await r.json();
+                if (d.retried && d.retried.length > 0) {
+                    document.getElementById('queuePanel').classList.add('open');
+                    if (pollTimer) clearInterval(pollTimer);
+                    pollTimer = setInterval(pollQueue, 2000);
+                    await pollQueue();
+                } else { alert('重试失败'); }
+            } catch(e) { alert('重试失败'); }
+        }
+
+        function toggleQueue() {
+            document.getElementById('queuePanel').classList.toggle('open');
+        }
+
+        async function checkBaiduStatus() {
+            try {
+                const r = await fetch('/api/baidu/status');
+                const d = await r.json();
+                const dot = document.getElementById('statusDot');
+                const txt = document.getElementById('statusText');
+                if (d.connected) {
+                    dot.className = 'dot online';
+                    txt.textContent = `${d.used_str} / ${d.quota_str}`;
+                } else {
+                    dot.className = 'dot offline';
+                    txt.textContent = '未连接';
+                }
+            } catch(e) {}
+        }
+
+        function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function esc(p) { return p.replace(/'/g,"\\'"); }
+        function fmtSize(b, isDir) {
+            if (isDir) {
+                if (b === -1) return '⏳';
+                if (b === 0) return '-';
+            }
+            if (b >= 1073741824) return (b/1073741824).toFixed(1)+'GB';
+            if (b >= 1048576) return (b/1048576).toFixed(1)+'MB';
+            if (b >= 1024) return (b/1024).toFixed(1)+'KB';
+            if (b === 0 && isDir) return '-';
+            return b+'B';
+        }
+        function fmtTime(t) {
+            if (!t) return '-';
+            const d = new Date(t*1000);
+            return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+        }
+
+        // 定时检查目录上传进度（局部更新，不刷新整个页面）
+        function startDirPoll() {
+            if (dirPollTimer) clearInterval(dirPollTimer);
+            dirPollTimer = setInterval(async () => {
+                try {
+                    const r = await fetch('/api/synced');
+                    const d = await r.json();
+                    dirProgress = d.dirs || {};
+                    syncedPaths = new Set(d.paths || []);
+                    // 局部更新每个文件夹的进度/状态
+                    document.querySelectorAll('tr.directory').forEach(tr => {
+                        const nameCell = tr.querySelector('.fname');
+                        if (!nameCell) return;
+                        const path = tr.getAttribute('data-path');
+                        if (!path) return;
+                        const dp = dirProgress[path] || null;
+                        let progHtml = '';
+                        if (dp && dp.status === 'scanning') {
+                            progHtml = `<div style="display:flex;align-items:center;gap:4px;margin-top:2px"><span style="font-size:10px;color:#fbbf24">🔍 扫描中...</span></div>`;
+                        } else if (dp && dp.status === 'uploading') {
+                            const label = dp.total > 0 ? `${dp.completed}/${dp.total}` : `${dp.completed}`;
+                            progHtml = `<div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div class="mini-bar"><div class="fill" style="width:${dp.progress}%"></div></div><span style="font-size:10px;color:#60a5fa">${label}</span></div>`;
+                        } else if (dp && dp.status === 'completed') {
+                            progHtml = `<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><span style="font-size:11px;color:#4ade80">✅ 同步完成</span><button class="del-btn" onclick="event.stopPropagation();deleteSynced('${esc(path)}')">🗑️</button></div>`;
+                        } else if (!dp || dp.status === 'pending') {
+                            // 没有进度或已完成，显示同步标记
+                            const sy = syncedPaths.has(path) ? '<span class="sync-badge">✅</span>' : '';
+                            const existingSy = nameCell.querySelector('.sync-badge');
+                            if (sy) { if (!existingSy) nameCell.insertAdjacentHTML('beforeend', sy); }
+                            else if (existingSy) existingSy.remove();
+                        }
+                        // 更新/移除进度元素
+                        const existingProg = tr.querySelector('.dir-progress');
+                        if (existingProg) existingProg.remove();
+                        if (progHtml) {
+                            const td = tr.querySelector('td');
+                            if (td) {
+                                const div = document.createElement('div');
+                                div.className = 'dir-progress';
+                                div.innerHTML = progHtml;
+                                td.appendChild(div);
+                            }
+                        }
+                    });
+                } catch(e) {}
+            }, 5000);  // 每5秒更新一次，不干扰用户操作
+        }
+        startDirPoll();
+
+        updateSizeToggleBtn();
+        checkBaiduStatus();
+        setInterval(checkBaiduStatus, 30000);
+        loadDir('/mnt');
+    </script>
+</body>
+</html>
