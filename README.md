@@ -8,13 +8,7 @@
 
 ## 📸 界面预览
 
-| 登录页面 | 文件浏览 | 上传进度 |
-|---------|---------|---------|
-| 登录页面 | 文件浏览 | 上传进度 |
-|---------|---------|---------|
-| ![Login](https://placehold.co/300x200/1a1a23/3b82f6?text=Login) | ![Browse](https://placehold.co/300x200/1a1a23/22c55e?text=File+Browser) | ![Upload](https://placehold.co/300x200/1a1a23/60a5fa?text=Upload+Progress) |
-
-*(欢迎 PR 替换为真实截图)*
+![百度网盘上传助手](screenshots/login.png)
 
 ---
 
