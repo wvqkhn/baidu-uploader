@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百度网盘上传助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f13;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box {
+            background: #1a1a23;
+            border: 1px solid #2a2a3a;
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 380px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .password-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0f0f13;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .password-input:focus {
+            border-color: #3b82f6;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 16px;
+            background: #3b82f6;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .2s;
+        }
+        .login-btn:hover { background: #2563eb; }
+        .login-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .error { color: #ef4444; font-size: 14px; margin-top: 12px; display: none; }
+        .error.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo">☁️</div>
+        <h1>百度网盘上传助手</h1>
+        <p class="subtitle">本地文件上传到百度网盘</p>
+        <input type="password" class="password-input" id="password"
+               placeholder="请输入密码" autofocus
+               onkeydown="if(event.key==='Enter') login()">
+        <button class="login-btn" id="loginBtn" onclick="login()">登录</button>
+        <div class="error" id="error">密码错误</div>
+    </div>
+    <script>
+        async function login() {
+            const pwd = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('error');
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            err.classList.remove('show');
+
+            try {
+                const resp = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'password=' + encodeURIComponent(pwd)
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    window.location.href = '/main';
+                } else {
+                    err.classList.add('show');
+                }
+            } catch(e) {
+                err.textContent = '网络错误';
+                err.classList.add('show');
+            }
+            btn.disabled = false;
+            btn.textContent = '登录';
+        }
+    </script>
+</body>
+</html>
